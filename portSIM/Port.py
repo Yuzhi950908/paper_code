@@ -50,8 +50,8 @@ class Agent(Entity):
 核心目标
 1. 输入 停车区域 的行数&列数， 以及对应的 每个区域的 长宽, 可以自动生成 停车场的layout参数
 2. 输入小车的个数, 可以自动在第一排停车区域随机生成车子的坐标
-3. 可以根据 外界生成并输入的goals(比如{'车1':'[5,3],[11,7],[14,2]'},生成所需的路径一系列坐标
-4. 调用step,每个step,车子应当是可以任意改变当前的坐标的, 还得有终止step的功能
+3. 可以根据 外界生成并输入的goals(比如{'车1':'[5,3],[11,7],[14,2]'},生成所需的最短路径坐标
+4. step 功能,这个里面功能应当是 包含了 reset 和 每一个步reculation的功能. 这个功能可能要根据具体需求设计
 """
 
 class Port(gym.env):
@@ -62,6 +62,7 @@ class Port(gym.env):
 
         self.goals = goals
         self.num_agvs= num_agvs
+        self.agvs=[]
         self._make_layout_from_params(parking_columns,column_height,parking_rows,row_width)
         #self.observation 所有和oberservation 有关我都没写，不知道干嘛的
         self.renderer=None
@@ -124,15 +125,59 @@ class Port(gym.env):
         return self.agent_locs #这个就是下一个找路模块的 start_point
 
     #下面实现第三个目标，我换成了NetworkX  默认使用 BFS 算法      
-    def path_finding(self,grid_parking,start_point,goals):
+    def path_finding(self,grid_parking,start_point,goals:Tuple):#这个goals 应当是 这样的Tuple结构 [[(2,5),(11,7),(14,2)]，[....],[...],[...],[...]]
         G=nx.grid_2d_graph(len(grid_parking[0]), len(grid_parking[1]))
         for row in range(len(grid_parking[0])):
             for column in range(len(grid_parking[1])):
                 if grid_parking[row][column] == 1:
                     G.remove_node((row, column))#我把之前定义成 1 的停车位拿掉，不准它走。只允许走highway。
+        shortest_path={}
+        for i in range(len(self.agent_locs)):
+            initial_loc=[self.agent_locs[i]]
+            loc_list=goals[i].insert[0,initial_loc]# 这里可能需要debug 一下，因为 goals是Tuple 结构，initial 是个 List
+            path_finding=[]
+            for index in range(len(loc_list)-1):#这个逻辑 主要是解决 终点再转运过程中会 变成起始点
+                start_point=[loc_list[index]]
+                end_point=[loc_list[index+1]]
+                path = nx.shortest_path(G, source=start_point, target=end_point)
+                path_finding.append(path)
+        shortest_path[f'shortest_path for Agent{i}']=path_finding
+
+        return shortest_path
+    
+    # 第四个目标,这个目标可能需要根据需求再设计一下
+    def step(self,actions):
+        self._cur_steps +=1
+        done =False
+
+
+        for index_agent,agent in enumerate(self.agvs):
+            for action in actions:
+                self._cur_location=[]
+                if agent.req_action == Action.LEFT:
+                    agent.x,agent.y = agent.x-1,agent.y
+                elif agent.req_action == Action.RIGHT:
+                    agent.x,agent.y = agent.x+1,agent.y
+                elif agent.req_action == Action.UP:
+                    agent.x,agent.y = agent.x,agent.y-1
+                elif agent.req_action == Action.DOWN:
+                    agent.x,agent.y=agent.x,agent.y+1
+                else:
+                    agent.x,agent.y=agent.x,agent.y
+                self._cur_location.append(agent.x,agent.y)
+                actions.pop(0)
+
+            return
         
-        #然后我现在知道哪儿不可以走了。就可以定义 start point 和 goals了。
-        for i in 
+        if actions==[] or self._cur_steps >=500:
+            done= True
+
+
+    
+
+
+
+
 
         
 
