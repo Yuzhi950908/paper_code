@@ -54,6 +54,11 @@ class Agent(Entity):
 4. step 功能,这个里面功能应当是 包含了 reset 和 每一个步reculation的功能. 这个功能可能要根据具体需求设计
 """
 
+"""
+疑惑点
+1. 怎么把DQL 比如observation reward 嵌进环境中
+"""
+
 class Port(gym.env):
     
     metadata= {"render_modes":["human","rgb_array"]}
@@ -93,15 +98,15 @@ class Port(gym.env):
         not_highway_xs=[num_ for num_ in  list(range(self.grid_size[1])) if num_ not in highway_xs]
 
         def fill_parking(not_highway_ys, not_highway_xs):
-            parking_coord=[]
+            self._parking_coord=[]
             for xs in not_highway_xs:
                 for ys in not_highway_ys:
                     temp=[ys,xs]
-                    parking_coord.append(temp)
-            return parking_coord
-        _parking_coord=fill_parking(not_highway_ys,not_highway_xs)
+                    self._parking_coord.append(temp)
+            return self._parking_coord
+        self._parking_coord=fill_parking(not_highway_ys,not_highway_xs)
 
-        for row,column in _parking_coord:
+        for row,column in self._parking_coord:
             self.grid_parking[row,column]=1
         
         return self.grid_parking
@@ -146,6 +151,12 @@ class Port(gym.env):
         return shortest_path
     
     # 第四个目标,这个目标可能需要根据需求再设计一下
+    def reset(self):
+        self._cur_steps = 0
+        Agent.counter=5
+        self.parking =self._parking_coord
+        self.agents = self.agent_locs
+
     def step(self,actions):
         self._cur_steps +=1
         done =False
@@ -171,6 +182,15 @@ class Port(gym.env):
         
         if actions==[] or self._cur_steps >=500:
             done= True
+    def render(self,mode="human"):
+        if not self.renderer:
+            from portSIM.rendering import Viewer
+            self.renderer= Viewer(self.grid_size)
+        return self.renderer.render(self,return_rgb_array = mode == "rgb_array")
+
+    def close(self):
+        if self.renderer:
+            self.renderer.close()
 
 
     
