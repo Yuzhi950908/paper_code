@@ -57,6 +57,8 @@ class Agent(Entity):
 """
 疑惑点
 1. 怎么把DQL 比如observation reward 嵌进环境中
+2. 怎么能渲染出图片
+3. 怎么把这些模块接在一起运行起来
 """
 
 class Port(gym.env):
