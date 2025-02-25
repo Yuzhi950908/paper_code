@@ -7,24 +7,19 @@ _sizes={
   'small': (1,5), #我们得逻辑目前是1 行 ，5列停车位， 每列6个格子
 }
 
-#_request_queues 不符合我们的逻辑，我们的要求序列，是有特定长度得。
-
 #_perms = 不知道这个怎么用，暂时没有写
-
-for size,obs_types,num_agvs,num_pickers in _perms:
-    gym.register(
-        id=f"port-{size}-{num_agvs}agvs",
-        entry_point="port.port_model:Port",
-        kwargs={
+size='small'
+num_agvs=1 #先用一个测试一下
+goals=[[2,5],[11,7],[14,2]] #这里暂时手动输入
+gym.register(
+    id=f"port-{size}-{num_agvs}agvs",
+    entry_point="portSIM.Port:Port",
+    kwargs={
+            'parking_columns': _sizes[size][1],
             'column_height':6,
             'parking_rows':_sizes[size][0],
-            'parking_columns':_sizes[size][1],
-            'num_agvs': num_agvs,
-            'num_pickers': num_pickers,
-            'request_queues': _request_queues[size],
-            'max_inacitivity_steps': None,
-            'max_step': 500,
-            'reward_type': RewardType.INDIVIDUAL,
-            'Observation_type': obs_types
+            'row_width': 1,
+            'num_agvs':num_agvs,
+            'goals':goals #这个goals 应当是 这样的Tuple结构 [[(2,5),(11,7),(14,2)]，[....],[...],[...],[...]]
             },
     )

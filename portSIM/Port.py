@@ -30,8 +30,10 @@ class Agent(Entity):
         super().__init__(Agent.counter, x, y)
         self.duration = duration_type
         self.req_action: Optional[Action] = None
-        self.type = agent_type
+        self.type = agent_type 
     
+
+    #这个req_location 之后可以手动操作汽车在格子里移动。
     def req_location(self,grid_size):  #->Tuple[int,int] 
         if self.req_action != Action.STAY:
             return self.x, self.y
@@ -49,9 +51,9 @@ class Agent(Entity):
 """
 核心目标
 1. 输入 停车区域 的行数&列数， 以及对应的 每个区域的 长宽, 可以自动生成 停车场的layout参数
-2. 输入小车的个数, 可以自动在第一排停车区域随机生成车子的坐标
+2. 输入小车的个数, 可以自动在第一排停车区域随机生成车子的坐标,这个坐标可以用于生成小车
 3. 可以根据 外界生成并输入的goals(比如{'车1':'[5,3],[11,7],[14,2]'},生成所需的最短路径坐标
-4. step 功能,这个里面功能应当是 包含了 reset 和 每一个步reculation的功能. 这个功能可能要根据具体需求设计
+4. step 功能,这个里面功能应当是 包含了 reset 的功能. 这个功能可能要根据具体需求设计
 """
 
 """
@@ -119,7 +121,7 @@ class Port(gym.env):
     #下面实现第二个目标
     def fill_agvs(self):
         self._first_column_coord=[]
-        for row in range(self.column_height):
+        for row in range(5):
             temp_first_row=[self._highway_lane + row, self._highway_lane]
             self._first_column_coord.append(temp_first_row)
             agent_loc_ids=np.random.choice(
@@ -127,7 +129,8 @@ class Port(gym.env):
                 size=self.num_agvs,
                 replace=False,
             )
-        self.agent_locs=[self._first_row_coord[i] for i in agent_loc_ids]
+        self.agent_locs_array=[self._first_row_coord[i] for i in agent_loc_ids]
+        self.agent_locs=[arr.todolist() for arr in self.agent_locs_array]
         #我在这里随机创造出来 5辆车子的初始位置，比如[array([5,2]),array([7,2]),array([4,2]),array([2,2]),array([3,2])]
         return self.agent_locs #这个就是下一个找路模块的 start_point
 
@@ -141,9 +144,9 @@ class Port(gym.env):
         shortest_path={}
         for i in range(len(self.agent_locs)):
             initial_loc=[self.agent_locs[i]]
-            loc_list=goals[i].insert[0,initial_loc]# 这里可能需要debug 一下，因为 goals是Tuple 结构，initial 是个 List
+            loc_list=goals[i].insert[0,initial_loc]
             path_finding=[]
-            for index in range(len(loc_list)-1):#这个逻辑 主要是解决 终点再转运过程中会 变成起始点
+            for index in range(len(loc_list)-1):#这个逻辑 主要是解决 终点再转运过程中会 变成起始点，比如小车到达2，5之后。 2，5变成起点了，11，7变成终点
                 start_point=[loc_list[index]]
                 end_point=[loc_list[index+1]]
                 path = nx.shortest_path(G, source=start_point, target=end_point)
@@ -155,35 +158,21 @@ class Port(gym.env):
     # 第四个目标,这个目标可能需要根据需求再设计一下
     def reset(self):
         self._cur_steps = 0
-        Agent.counter=5
-        self.parking =self._parking_coord
+        Port.fill_agvs() #重置5个车子得位置
         self.agents = self.agent_locs
 
-    def step(self,actions):
+    def step(self,actions): #我之后输入一连串得路径坐标作为actions
         self._cur_steps +=1
         done =False
 
-
-        for index_agent,agent in enumerate(self.agvs):
-            for action in actions:
-                self._cur_location=[]
-                if agent.req_action == Action.LEFT:
-                    agent.x,agent.y = agent.x-1,agent.y
-                elif agent.req_action == Action.RIGHT:
-                    agent.x,agent.y = agent.x+1,agent.y
-                elif agent.req_action == Action.UP:
-                    agent.x,agent.y = agent.x,agent.y-1
-                elif agent.req_action == Action.DOWN:
-                    agent.x,agent.y=agent.x,agent.y+1
-                else:
-                    agent.x,agent.y=agent.x,agent.y
-                self._cur_location.append(agent.x,agent.y)
-                actions.pop(0)
-
-            return
+        if actions:
+            actions.pop(0)
         
-        if actions==[] or self._cur_steps >=500:
+        if not actions or self._cur_steps >=500:
             done= True
+        
+        return done
+    
     def render(self,mode="human"):
         if not self.renderer:
             from portSIM.rendering import Viewer
