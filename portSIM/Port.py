@@ -45,7 +45,16 @@ class Agent(Entity):
             return max(0, self.x-1), self.y
         elif self.req_action == Action.RIGHT:
             return min(grid_size[1]-1,self.x+1),self.y
-    
+
+
+class Parkinglot(Entity):
+    counter = 0
+
+    def __init__(self, x, y):
+        Parkinglot.counter +=1
+        super().__init__(self.counter, x, y)
+
+
 """以下对env也就是 Port 进行建模"""
 
 """
@@ -62,6 +71,10 @@ class Agent(Entity):
 2. 怎么能渲染出图片
 3. 怎么把这些模块接在一起运行起来
 """
+
+
+
+
 
 class Port(gym.env):
     
@@ -100,6 +113,8 @@ class Port(gym.env):
         highway_xs= get_highway_lanes_indices(self.grid_size[1],self.column_width)
         not_highway_ys=[num for num in  list(range(self.grid_size[0])) if num not in highway_ys]
         not_highway_xs=[num_ for num_ in  list(range(self.grid_size[1])) if num_ not in highway_xs]
+
+
 
         def fill_parking(not_highway_ys, not_highway_xs):
             self._parking_coord=[]
@@ -156,10 +171,42 @@ class Port(gym.env):
         return shortest_path
     
     # 第四个目标,这个目标可能需要根据需求再设计一下
-    def reset(self):
+    def reset(self,seed=None, options=None):
+
         self._cur_steps = 0
-        Port.fill_agvs() #重置5个车子得位置
-        self.agents = self.agent_locs
+        Parkinglot.counter = 0
+        Agent.counter=0
+        self.seed(seed)
+
+        #先把 停车位实体创造出来, 我之前已经把停车场区域赋值成了1, highway是0了
+        self.parking_lot=[
+            Parkinglot(x,y)
+            for y, x in zip(
+                np.indices(self.grid_size)[0].reshape(-1),
+                np.indices(self.grid_size)[1].reshape(-1),
+            )
+            if self.grid_parking[y,x]==1
+        ]
+        #然后确定Highway得坐标
+        self._highway_locs= np.array([
+            (y,x)
+            for y,x in zip(
+                np.indices(self.grid_size)[0].reshape(-1),
+                np.indices(self.grid_size)[1].reshape(-1),
+            )
+            if self.grid_parking[y,x]==0
+        ])
+
+        #然后下一步是创造Agents 实体
+        self.agent_locs=Port.fill_agvs()  #这里输出5个坐标
+
+        self.agents= [
+            Agent(x,y,Duration.SHORT,AgentType.AGV)
+            for y,x in self.agent_locs           
+        ]
+
+        #然后下一步暂时再停车场里随意分配一个停车位 作为Baseline
+        
 
     def step(self,actions): #我之后输入一连串得路径坐标作为actions
         self._cur_steps +=1
@@ -182,6 +229,7 @@ class Port(gym.env):
     def close(self):
         if self.renderer:
             self.renderer.close()
+
 
 
     
