@@ -23,8 +23,6 @@ class RewardType(Enum): #我不知道这个之后有什么用
     INDIVIDUAL=1
     TWO_STAGE=2
 
-#class CollisionLayers(IntEnum):  暂时不考虑这个 避开 Collision功能
-    #AGVS=0
-    #PICKERS=1
-    #SHELVES=2
-    #CARRIED_SCHELVES=3
+class Layers(IntEnum):  
+    AGVS=0
+    PARKINGLOT=1

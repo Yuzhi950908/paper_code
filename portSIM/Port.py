@@ -62,7 +62,7 @@ class Parkinglot(Entity):
 1. 输入 停车区域 的行数&列数， 以及对应的 每个区域的 长宽, 可以自动生成 停车场的layout参数
 2. 输入小车的个数, 可以自动在第一排停车区域随机生成车子的坐标,这个坐标可以用于生成小车
 3. 可以根据 外界生成并输入的goals(比如{'车1':'[5,3],[11,7],[14,2]'},生成所需的最短路径坐标
-4. step 功能,这个里面功能应当是 包含了 reset 的功能. 这个功能可能要根据具体需求设计
+4. step 功能,这个里面功能应当是 包含了 reset 的功能. 
 """
 
 """
@@ -80,14 +80,18 @@ class Port(gym.env):
     
     metadata= {"render_modes":["human","rgb_array"]}
     
-    def __init__(self,parking_columns:int,column_height:int,parking_rows: int,row_width:int,num_agvs:int,goals:Tuple):
-
-        self.goals = goals
+    def __init__(self,parking_columns:int,column_height:int,parking_rows: int,row_width:int,num_agvs:int):
         self.num_agvs= num_agvs
         self.agvs=[]
         self._make_layout_from_params(parking_columns,column_height,parking_rows,row_width)
         #self.observation 所有和oberservation 有关我都没写，不知道干嘛的
         self.renderer=None
+
+
+
+
+
+
 
     #下面实现第一个目标 make Layout,这个功能我已经验证过了。没有问题的
     def _make_layout_from_params(self,parking_columns,column_height,parking_rows,row_width):
@@ -133,6 +137,13 @@ class Port(gym.env):
         # 这个self.grid_parking 可以直接接进 之后 找路的算法
 
 
+
+
+
+
+
+
+
     #下面实现第二个目标
     def fill_agvs(self):
         self._first_column_coord=[]
@@ -149,8 +160,17 @@ class Port(gym.env):
         #我在这里随机创造出来 5辆车子的初始位置，比如[array([5,2]),array([7,2]),array([4,2]),array([2,2]),array([3,2])]
         return self.agent_locs #这个就是下一个找路模块的 start_point
 
+
+
+
+
+
+
+
+
+
     #下面实现第三个目标，我换成了NetworkX  默认使用 BFS 算法      
-    def path_finding(self,grid_parking,start_point,goals:Tuple):#这个goals 应当是 这样的Tuple结构 [[(2,5),(11,7),(14,2)]，[....],[...],[...],[...]]
+    def path_finding(self,grid_parking,start_point,goals):
         G=nx.grid_2d_graph(len(grid_parking[0]), len(grid_parking[1]))
         for row in range(len(grid_parking[0])):
             for column in range(len(grid_parking[1])):
@@ -170,7 +190,15 @@ class Port(gym.env):
 
         return shortest_path
     
-    # 第四个目标,这个目标可能需要根据需求再设计一下
+
+
+
+
+
+
+    # 第四个目标: reset 和 step
+    # reset: 应当是是可以重置汽车的位置和整个环境
+    # step: 步数加一得同时，应当Agent的位置 都会随之更新
     def reset(self,seed=None, options=None):
 
         self._cur_steps = 0
@@ -205,19 +233,21 @@ class Port(gym.env):
             for y,x in self.agent_locs           
         ]
 
-        #然后下一步暂时再停车场里随意分配一个停车位 作为Baseline
-        
 
-    def step(self,actions): #我之后输入一连串得路径坐标作为actions
+
+    #这个step的难点就是，该能驱动Agent每一步都更新坐标
+    def step(self,actions): #我之后输入一连串得shortest_Path做为actions
         self._cur_steps +=1
         done =False
-
-        if actions:
-            actions.pop(0)
-        
-        if not actions or self._cur_steps >=500:
+        if not actions or self._cur_steps >=500:# 如果acitons是空集合了，那就结束，说明车子已经到了出口了。
             done= True
         
+        else: #但凡不是空集，就把这个集合里的第一个元素提取出来给。这就是当前的车坐标
+            self._cur_loc=actions.pop(0)
+            #这里我暂时就想让第一辆车动起来就结束，我要更新这个第一个agent的位置就行了，其他4辆保持不动
+            self.agents[0].y, self.agents[0].x = self._cur_loc
+        
+        #到这里结束。我因该只要运行一个step 我都能看到agents里车1 坐标在变化       
         return done
     
     def render(self,mode="human"):
