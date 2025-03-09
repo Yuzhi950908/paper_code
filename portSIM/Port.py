@@ -76,7 +76,7 @@ class Parkinglot(Entity):
 
 
 
-class Port(gym.env):
+class Port(gym.Env):
     
     metadata= {"render_modes":["human","rgb_array"]}
     

@@ -10,7 +10,7 @@ _sizes={
 #_perms = 不知道这个怎么用，暂时没有写
 size='small'
 num_agvs=1 #先用一个测试一下
-goals=[[2,5],[11,7],[14,2]] #这里暂时手动输入
+goals=[2,5] #这里暂时手动分配一个停车位
 gym.register(
     id=f"port-{size}-{num_agvs}agvs",
     entry_point="portSIM.Port:Port",
